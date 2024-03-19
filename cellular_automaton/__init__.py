@@ -1,0 +1,1 @@
+import cellular_automaton.main_cycle
