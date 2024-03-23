@@ -1,1 +1,1 @@
-import cellular_automaton.main_cycle
+from .main_cycle import MainCycle

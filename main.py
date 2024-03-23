@@ -1,3 +1,9 @@
 import cellular_automaton as ca
 
-ca.main_cycle.MainCycle().run()
+ca.MainCycle(
+    (200, 100),
+    borders=False,
+    update_frequency=20,
+    forced_render=False,
+    render_frequency=20,
+).run()
