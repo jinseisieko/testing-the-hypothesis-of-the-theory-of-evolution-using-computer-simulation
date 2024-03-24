@@ -9,13 +9,13 @@ from .const import SELF_SIZE, FPS
 
 class MainCycle(object):
     def __init__(
-        self,
-        size: tuple[int, int],
-        forced_render: bool = False,
-        update_frequency: int = 30,
-        render_frequency: int = FPS,
-        automatic_screen_resolution=True,
-        borders=True,
+            self,
+            size: tuple[int, int],
+            forced_render: bool = False,
+            update_frequency: int = 30,
+            render_frequency: int = FPS,
+            automatic_screen_resolution=True,
+            borders=True,
     ) -> None:
         self.forced_render = forced_render
         self.position: tuple[int, int] = (0, 0)
@@ -36,16 +36,17 @@ class MainCycle(object):
             update_frequency=update_frequency,
             render_frequency=render_frequency,
         )
+
+    def render(self) -> None:
+        if self.forced_render:
+            self.field.__render__()
+
+    def run(self) -> None:
         self.field.start_thread_update()
 
         if not self.forced_render:
             self.field.start_thread_render()
 
-    def render(self) -> None:
-        if self.forced_render:
-            self.field.render()
-
-    def run(self) -> None:
         while True:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
