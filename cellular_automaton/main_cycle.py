@@ -3,6 +3,7 @@ import sys
 import pygame as pg
 import pyautogui
 
+from .cell import DefaultCell
 from .field import Field
 from .const import SELF_SIZE, FPS
 
@@ -16,6 +17,10 @@ class MainCycle(object):
             render_frequency: int = FPS,
             automatic_screen_resolution=True,
             borders=True,
+            layer_by_layer_update: bool = False,
+            default_cell: type = DefaultCell,
+            forced_rendering_of_all_pixels: bool = True,
+
     ) -> None:
         self.forced_render = forced_render
         self.position: tuple[int, int] = (0, 0)
@@ -35,6 +40,9 @@ class MainCycle(object):
             borders=borders,
             update_frequency=update_frequency,
             render_frequency=render_frequency,
+            layer_by_layer_update=layer_by_layer_update,
+            default_cell=default_cell,
+            forced_rendering_of_all_pixels=forced_rendering_of_all_pixels
         )
 
     def render(self) -> None:

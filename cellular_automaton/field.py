@@ -1,5 +1,7 @@
+import copy
 import time
 import random
+from pprint import pprint
 
 from .Exceptions.field_Exceptions import SpawnCellException, GetCellException, GetPatternCellException, \
     DrawCellException
@@ -18,14 +20,18 @@ class Field(object):
             size: tuple[int, int],
             update_frequency: int = 30,
             render_frequency: int = FPS,
-            default_cell=RedCell,
-            borders=True,
+            default_cell: type = DefaultCell,
+            borders: bool = True,
+            layer_by_layer_update: bool = False,
+            forced_rendering_of_all_pixels: bool = True,
     ) -> None:
         self.__size__: tuple[int, int] = size  # Field size in cells
-        self.__default_cell__ = default_cell  # all initial cells will be created of this class
-        self.__borders__: bool = borders  # will the boundaries of the cells be drawn
+        self.__default_cell__: type = default_cell  # All initial cells will be created of this class
+        self.__borders__: bool = borders  # Will the boundaries of the cells be drawn
         self.__update_frequency__: int = update_frequency  # Cell renewal rate (fields)
         self.__render_frequency__: int = render_frequency  # Field rendering speed
+        self.__layer_by_layer_update__: bool = layer_by_layer_update  # layer-by-layer update
+        self.__forced_rendering_of_all_pixels__: bool = forced_rendering_of_all_pixels  # forced rendering of all pixels
 
         # cell size on the surface of this class
         self.__render_size_cell__: int = int(100 * RENDERING_ENHANCEMENT)
@@ -58,6 +64,8 @@ class Field(object):
         self.__cells__: list = [
             [default_cell() for _ in range(size[0])] for _ in range(size[1])
         ]
+
+        self.__next__cells__ = copy.deepcopy(self.__cells__)
 
         # array that is responsible for the need to render the cell
         self.__need_render__: list = [[True for _ in range(size[0])] for _ in range(size[1])]
@@ -131,9 +139,14 @@ class Field(object):
         if not issubclass(class_, Cell):
             SpawnCellException("class_ is not a subclass of Cell")
 
+        self.__need_render__[y][x] = True
+
         self.event.event_spawn_cell(self, x, y)  # cell spawning event
 
-        self.__cells__[y][x] = class_(*args, **kwargs)
+        if self.__layer_by_layer_update__:
+            self.__next__cells__[y][x] = class_(*args, **kwargs)
+        else:
+            self.__cells__[y][x] = class_(*args, **kwargs)
 
     def get_cell(self, x: int, y: int) -> Cell:
         """
@@ -155,6 +168,19 @@ class Field(object):
 
         return self.__cells__[y][x]
 
+    def try_get_cell(self, x: int, y: int, default: type, *args, **kwargs) -> Cell:
+        if x < 0:
+            return default(*args, **kwargs)
+        if y < 0:
+            return default(*args, **kwargs)
+
+        if x >= self.__size__[0]:
+            return default(*args, **kwargs)
+        if y >= self.__size__[1]:
+            return default(*args, **kwargs)
+
+        return self.__cells__[y][x]
+
     def get_pattern_cell(self, x: int, y: int) -> pg.Surface:
         """
         Returns the pattern cell in the specified coordinates
@@ -172,6 +198,11 @@ class Field(object):
         if y >= self.__size__[1]:
             GetPatternCellException("y cannot be greater than the size of the field", x, y)
 
+        if self.__layer_by_layer_update__:
+            return pg.transform.scale(
+                self.__next__cells__[y][x].pattern,
+                (self.__render_size_cell__, self.__render_size_cell__),
+            )
         return pg.transform.scale(
             self.__cells__[y][x].pattern,
             (self.__render_size_cell__, self.__render_size_cell__),
@@ -223,21 +254,30 @@ class Field(object):
         self.event.event_render(self, self.__need_render__)
         for y in range(len(self.__need_render__)):
             for x in range(len(self.__need_render__[y])):
-                if self.__need_render__[y][x]:
+                if self.__need_render__[y][x] or self.__forced_rendering_of_all_pixels__:
                     self.draw_cell(x, y, self.get_pattern_cell(x, y))
                     self.__need_render__[y][x] = False
 
     @time_decorator(frequency=10)
     def __update__(self):
+        if self.__layer_by_layer_update__:
+            self.__next__cells__ = copy.deepcopy(self.__cells__)
         self.event.event_update(self)
         for y, line_cells in enumerate(self.__cells__):
             for x, cell in enumerate(line_cells):
 
                 self.event.event_update_cell(self, x, y)
 
-                need_update = cell.update(self)
+                information = {
+                    "x": x,
+                    "y": y
+                }
+
+                need_update = cell.update(self, information)
                 if not (need_update is None) and not (self.__need_render__[y][x]):
                     self.__need_render__[y][x] = need_update
+        if self.__layer_by_layer_update__:
+            self.__cells__ = self.__next__cells__
 
 
 class Event:

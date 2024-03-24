@@ -7,7 +7,7 @@ class Cell(ABC):
     def __init__(self, *args, **kwargs) -> None: ...
 
     @abstractmethod
-    def update(self, field) -> bool: ...
+    def update(self, field, information: dict) -> bool: ...
 
     @property
     @abstractmethod
@@ -26,7 +26,7 @@ class DefaultCell(Cell):
         default_surface.fill((255, 255, 255))
         return default_surface
 
-    def update(self, _):
+    def update(self, *args, **kwargs) -> bool:
         if not self.appear:
             self.appear = True
             return True
@@ -44,7 +44,7 @@ class RedCell(Cell):
         super().__init__()
         self.value = 10
 
-    def update(self, _):
+    def update(self, *args, **kwargs) -> bool:
         if self.value > 255:
             self.value = 10 + random.randint(0, 20)
         self.value += random.randint(0, 1)
